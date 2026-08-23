@@ -93,24 +93,26 @@ html,body{overflow-x:hidden;}
 .stat .v{font-family:var(--font-d);font-size:20px;font-weight:600;margin-top:3px;}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
-.card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.card-h h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .card-h h2{font-family:var(--font-d);font-size:15px;margin:0;font-weight:600;}
-.card-h select{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12px;}
+.card-h select{background:var(--card-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12px;min-width:0;max-width:100%;flex-shrink:0;}
 canvas{max-height:220px;}
 
 .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
 .empty .big{font-size:28px;display:block;margin-bottom:8px;}
 
 /* forms */
-.field{margin-bottom:12px;}
+.field{margin-bottom:12px;min-width:0;}
 .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
 .field input, .field select, .field textarea{
-  width:100%;background:var(--card-2);border:1px solid var(--line);color:var(--text);
+  width:100%;min-width:0;box-sizing:border-box;background:var(--card-2);border:1px solid var(--line);color:var(--text);
   padding:12px 14px;border-radius:12px;font-size:15px;font-family:var(--font-b);
 }
 .big-input{font-family:var(--font-d);font-size:28px;font-weight:600;text-align:center;padding:14px;}
 textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+.row2 > *{min-width:0;}
 .btn{
   width:100%;background:var(--accent);color:#1a0d05;border:none;padding:14px;
   border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;font-family:var(--font-b);
