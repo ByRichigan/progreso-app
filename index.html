@@ -142,7 +142,9 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 
 /* day-form */
 .ex-block{background:var(--card-2);border-radius:12px;padding:12px 13px;margin-bottom:8px;}
-.ex-block .ex-name{font-weight:600;font-size:13.5px;margin-bottom:2px;}
+.ex-block .ex-name{font-weight:600;font-size:13.5px;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+.muscle-ic{width:15px;height:15px;color:var(--muted);flex-shrink:0;display:inline-flex;}
+.muscle-ic svg{width:100%;height:100%;}
 .ex-block .ex-last{font-size:11px;color:var(--muted);margin-bottom:8px;}
 .ex-block .ex-last .up{color:var(--good);}
 .ex-block .ex-last .down{color:var(--bad);}
@@ -312,6 +314,11 @@ nav.bottom .nav-brand{display:none;}
       <div class="cal-grid" id="cal-grid-mini"></div>
     </div>
 
+    <div class="card" id="week-compare-card">
+      <div class="card-h"><h2>Esta semana vs anterior</h2></div>
+      <div class="grid2" id="week-compare-body"></div>
+    </div>
+
     <div class="charts-row">
       <div class="card">
         <div class="card-h"><h2>Evolución del peso</h2></div>
@@ -325,11 +332,22 @@ nav.bottom .nav-brand{display:none;}
     </div>
 
     <div class="card">
+      <div class="card-h"><h2>Volumen semanal</h2></div>
+      <div id="volume-week-holder"><canvas id="chartVolumenSemana"></canvas></div>
+    </div>
+
+    <div class="card">
       <div class="card-h">
         <h2>Progresión por ejercicio</h2>
         <select id="exercise-picker" onchange="renderExerciseChart()"></select>
       </div>
       <div id="exercise-chart-holder"><canvas id="chartEjercicio"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Analizar con IA</h2></div>
+      <div class="hint" style="margin-bottom:10px;">Manda tus datos de esta semana a Claude y recibe una valoración al momento, sin salir de la app.</div>
+      <button class="btn ghost" onclick="alert('Aún no configurado — hablemos primero de cómo montarlo de forma segura.')">✨ Analizar mi semana</button>
     </div>
 
     <div class="card">
@@ -853,7 +871,7 @@ function renderDayForm(){
         <button class="rm" onclick="removeExRow(this)">✕</button>
       </div>`).join('');
     return `<div class="ex-block" data-exname="${name}">
-      <div class="ex-name">${name}</div>
+      <div class="ex-name">${muscleIconHtml(name)}${name}</div>
       <div class="ex-last">${lastHint}</div>
       <div class="ex-rows">${rowsHtml}</div>
       <button class="ex-add-block" onclick="addExRow(this)">+ bloque (dropset)</button>
@@ -1053,6 +1071,113 @@ function renderVolumeChart(){
   });
 }
 
+// ---------- SEMANAS (comparativa + volumen semanal) ----------
+function mondayOf(dateStr){
+  const d = new Date(dateStr+'T12:00:00');
+  const dow = d.getDay()===0 ? 7 : d.getDay(); // lunes=1..domingo=7
+  d.setDate(d.getDate() - (dow-1));
+  return d.toISOString().slice(0,10);
+}
+function shiftDate(dateStr, days){
+  const d = new Date(dateStr+'T12:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function sessionVolume(s){
+  return s.exercises.reduce((sum,ex)=> sum + (ex.ok? exerciseVolume(ex).vol:0), 0);
+}
+function weeklyBuckets(){
+  const map = {}; // mondayISO -> {weights:[], vol:0}
+  weights.forEach(w=>{
+    const k = mondayOf(w.date);
+    if(!map[k]) map[k] = {weights:[], vol:0};
+    map[k].weights.push(w.value);
+  });
+  sessions.forEach(s=>{
+    const k = mondayOf(s.date);
+    if(!map[k]) map[k] = {weights:[], vol:0};
+    map[k].vol += sessionVolume(s);
+  });
+  return map;
+}
+function renderWeekCompare(){
+  const body = document.getElementById('week-compare-body');
+  const thisMonday = mondayOf(todayISO);
+  const lastMonday = shiftDate(thisMonday, -7);
+  const buckets = weeklyBuckets();
+  const cur = buckets[thisMonday] || {weights:[], vol:0};
+  const prev = buckets[lastMonday] || {weights:[], vol:0};
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  const curAvgW = avg(cur.weights), prevAvgW = avg(prev.weights);
+
+  function statHtml(label, curVal, prevVal, unit, lowerIsBetter){
+    if(curVal===null){ return `<div class="stat"><div class="l">${label}</div><div class="v" style="font-size:14px;color:var(--muted);">Sin datos aún</div></div>`; }
+    let deltaHtml = '';
+    if(prevVal!==null && prevVal!==0){
+      const diff = curVal-prevVal;
+      const good = lowerIsBetter ? diff<0 : diff>0;
+      const arrow = diff===0 ? '=' : (diff>0?'▲':'▼');
+      deltaHtml = `<div class="sub" style="color:${diff===0?'var(--muted)':(good?'var(--good)':'var(--bad)')}">${arrow} ${Math.abs(diff).toFixed(1)}${unit} vs semana pasada</div>`;
+    } else {
+      deltaHtml = `<div class="sub">Sin semana anterior para comparar</div>`;
+    }
+    return `<div class="stat"><div class="l">${label}</div><div class="v">${curVal.toFixed(1)}${unit}</div>${deltaHtml}</div>`;
+  }
+
+  body.innerHTML =
+    statHtml('Peso medio', curAvgW, prevAvgW, ' kg', true) +
+    statHtml('Volumen total', cur.vol, prev.vol, ' kg', false);
+}
+
+let chartVolumenSemana;
+function renderVolumeWeekChart(){
+  const holder = document.getElementById('volume-week-holder');
+  const buckets = weeklyBuckets();
+  const weeks = Object.keys(buckets).sort();
+  const withVol = weeks.filter(k=>buckets[k].vol>0);
+  if(withVol.length===0){ holder.innerHTML = '<div class="empty"><span class="big">📊</span>Aún no hay suficientes semanas registradas</div>'; return; }
+  if(!document.getElementById('chartVolumenSemana')){ holder.innerHTML = '<canvas id="chartVolumenSemana"></canvas>'; }
+  if(chartVolumenSemana) chartVolumenSemana.destroy();
+  chartVolumenSemana = new Chart(document.getElementById('chartVolumenSemana'), {
+    type:'bar',
+    data:{labels:withVol.map(k=>'Sem. '+k.slice(5)), datasets:[{
+      data:withVol.map(k=>buckets[k].vol), backgroundColor:'#a259ff', borderRadius:6, maxBarThickness:34
+    }]},
+    options:{plugins:{legend:{display:false}}, scales:{
+      x:{ticks:{color:'#ab9fc4',font:{size:10}},grid:{display:false}},
+      y:{ticks:{color:'#ab9fc4',font:{size:10}},grid:{color:'#3a2d54'}}
+    }}
+  });
+}
+
+// ---------- ICONOS POR GRUPO MUSCULAR ----------
+const MUSCLE_ICONS = {
+  espalda: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M8 7c-2 1-3 3-3 6s1 5 3 7M16 7c2 1 3 3 3 6s-1 5-3 7"/></svg>',
+  pecho: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-2-2-6-2-7 1-1 3 1 6 7 11 6-5 8-8 7-11-1-3-5-3-7-1Z"/></svg>',
+  hombro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>',
+  biceps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20c-2-4-2-9 2-12 3-2 7-1 8 2 1 2 0 4-2 4-1.5 0-2-1-2-2"/><path d="M14 12c2 1 4 3 4 8"/></svg>',
+  triceps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v6c0 5 2 9 2 10M16 4v6c0 5-2 9-2 10" /></svg>',
+  pierna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h3l1 8-1 10H9l1-9-3-2 1-7Z"/><path d="M14 3h3l-1 6 2 3-2 11h-3"/></svg>',
+  abdomen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M7 9h10M7 14h10M12 4v16"/></svg>'
+};
+function categoryForExercise(name){
+  const n = name.toLowerCase();
+  if(/remo|jalon|jalón|pullover/.test(n)) return 'espalda';
+  if(/press plano|press s inclinado|press inclinado|apertura/.test(n)) return 'pecho';
+  if(/militar|posterior maq|lateral/.test(n)) return 'hombro';
+  if(/curl/.test(n)) return 'biceps';
+  if(/tricep|fondos|press inf/.test(n)) return 'triceps';
+  if(/femoral|hack|prensa|cuadriceps|cuádriceps|gemelo|aductor|rumano|extension/.test(n)) return 'pierna';
+  if(/abdomin/.test(n)) return 'abdomen';
+  return null;
+}
+function muscleIconHtml(name){
+  const cat = categoryForExercise(name);
+  if(!cat) return '';
+  return `<span class="muscle-ic" title="${cat}">${MUSCLE_ICONS[cat]}</span>`;
+}
+
 function allExerciseNames(){
   const names = new Set();
   sessions.forEach(s=>s.exercises.forEach(ex=>{ if(ex.ok) names.add(ex.name); }));
@@ -1147,6 +1272,8 @@ function render(){
   renderHero();
   renderWeightChart();
   renderVolumeChart();
+  renderVolumeWeekChart();
+  renderWeekCompare();
   renderExercisePicker();
   renderExerciseChart();
   renderWeightLog();
