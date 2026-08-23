@@ -194,10 +194,17 @@ nav.bottom .nav-brand{display:none;}
   <div id="token-setup" class="card" style="display:none;">
     <div class="card-h"><h2>Token de escritura (GitHub)</h2></div>
     <div class="hint" style="margin-bottom:10px;">
-      Pega aquí tu Personal Access Token de GitHub (con permiso Contents: Read and write sobre este repo). Se guarda solo en este dispositivo, nunca en el código público.
+      Pega aquí tu Personal Access Token de GitHub (con permiso Contents: Read and write sobre este repo).
     </div>
     <div class="field"><input type="text" id="cfg-token" placeholder="github_pat_..."></div>
-    <button class="btn" onclick="saveTokenFromInput()">Guardar en este dispositivo</button>
+    <button class="btn" onclick="saveTokenFromInput()">Generar enlace con token</button>
+    <div id="token-link-result" style="display:none;margin-top:12px;">
+      <div class="hint" style="margin-bottom:8px;">
+        Copia este enlace y ábrelo en Safari. Luego haz "Añadir a pantalla de inicio" <b>desde esa pestaña</b> — el icono llevará el token incluido para siempre, aunque el navegador olvide todo lo demás.
+      </div>
+      <div class="field"><input type="text" id="token-link-output" readonly onclick="this.select()"></div>
+      <button class="btn ghost small" style="width:100%;" onclick="copyTokenLink()">Copiar enlace</button>
+    </div>
   </div>
 
   <div id="reminder-banner" style="display:none;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px;">
@@ -352,6 +359,15 @@ let ghSha = null; // sha del último contenido leído, necesario para poder escr
 let ghToken = null; // token de escritura — se guarda localmente, nunca en el código
 
 function loadGhToken(){
+  // 1. prioridad: token en la URL (?token=...) — así el icono de pantalla de inicio
+  //    lo lleva incrustado y no depende de que el navegador recuerde nada.
+  const fromUrl = new URLSearchParams(location.search).get('token');
+  if(fromUrl){
+    ghToken = fromUrl;
+    try{ localStorage.setItem('progreso_gh_token', fromUrl); }catch(e){}
+    return;
+  }
+  // 2. si no viene en la URL, probamos lo guardado localmente (mejor que nada)
   try{ ghToken = localStorage.getItem('progreso_gh_token') || null; }
   catch(e){ ghToken = null; }
 }
@@ -382,14 +398,20 @@ function toggleTokenSetup(){
 function saveTokenFromInput(){
   const t = document.getElementById('cfg-token').value.trim();
   if(!t){ alert('Pega el token.'); return; }
-  const ok = saveGhToken(t);
-  document.getElementById('token-setup').style.display='none';
-  if(ok){
-    alert('Token guardado correctamente en este dispositivo.');
-    setCloudStatus('connected');
-  } else {
-    alert('OJO: el navegador no ha confirmado el guardado. Puede que necesites configurarlo cada vez en este dispositivo.');
-  }
+  saveGhToken(t); // también lo guarda en local por si acaso funciona en este dispositivo
+  setCloudStatus('connected');
+  const base = location.origin + location.pathname;
+  const link = base + '?token=' + encodeURIComponent(t);
+  document.getElementById('token-link-output').value = link;
+  document.getElementById('token-link-result').style.display = 'block';
+}
+function copyTokenLink(){
+  const el = document.getElementById('token-link-output');
+  el.select();
+  navigator.clipboard?.writeText(el.value).then(
+    ()=>alert('Enlace copiado. Ábrelo en Safari y añádelo a pantalla de inicio desde ahí.'),
+    ()=>alert('No se pudo copiar automáticamente — selecciona el texto y cópialo a mano.')
+  );
 }
 
 async function loadFromCloud(){
