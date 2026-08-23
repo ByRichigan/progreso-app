@@ -20,14 +20,14 @@
 <style>
 :root{
   --bg:#050408;
-  --card:#120f1a;
-  --card-2:#1a1526;
-  --line:#2e2440;
-  --text:#f4f2f8;
-  --muted:#93899f;
+  --card:#161320;
+  --card-2:#221c33;
+  --line:#3a2d54;
+  --text:#fbfaff;
+  --muted:#ab9fc4;
   --accent:#a259ff;
   --accent-2:#7c3aed;
-  --accent-soft:rgba(162,89,255,.16);
+  --accent-soft:rgba(162,89,255,.2);
   --good:#4ade9b;
   --bad:#ff5c6c;
   --radius:18px;
@@ -46,8 +46,22 @@ body{
   min-height:100vh;
   padding-bottom:90px;
 }
-.wrap{max-width:480px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 8px;}
+.wrap{max-width:480px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 8px;overflow-x:hidden;}
 .charts-row{display:block;}
+html,body{overflow-x:hidden;}
+
+/* header */
+.app-header{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;margin-bottom:16px;}
+.app-header-logo{font-family:var(--font-d);font-weight:700;font-size:18px;letter-spacing:-.02em;text-align:center;}
+.app-header-logo span{color:var(--accent);}
+.sync-dot{
+  width:12px;height:12px;border-radius:50%;border:none;padding:0;cursor:pointer;
+  background:var(--muted);box-shadow:0 0 0 4px transparent;transition:box-shadow .2s;
+  justify-self:start;
+}
+.sync-dot.ok{background:var(--good);box-shadow:0 0 8px rgba(74,222,155,.5);}
+.sync-dot.bad{background:var(--bad);box-shadow:0 0 8px rgba(255,92,108,.5);}
+.date-chip{font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 8px;border-radius:99px;justify-self:end;white-space:nowrap;}
 
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
 .brand{font-family:var(--font-d);font-weight:700;font-size:19px;letter-spacing:-.02em;}
@@ -137,18 +151,40 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .dot-weight{background:var(--good);}
 .dot-workout{background:var(--accent);}
 .dot-rest{background:var(--muted);}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%;box-sizing:border-box;}
 .cal-dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:4px;}
 .cal-day{
-  aspect-ratio:1;border-radius:10px;background:var(--card-2);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;font-size:12px;cursor:pointer;position:relative;gap:2px;
-  border:1px solid transparent;
+  aspect-ratio:1;min-width:0;border-radius:9px;background:var(--card-2);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:11.5px;cursor:pointer;position:relative;gap:2px;
+  border:1px solid transparent;overflow:hidden;
 }
 .cal-day.empty{background:transparent;cursor:default;}
 .cal-day.today{border-color:var(--accent);}
 .cal-day.rest-day{opacity:.55;}
 .cal-day .dots{display:flex;gap:2px;position:absolute;bottom:4px;}
 .cal-day .dots i{width:5px;height:5px;border-radius:50%;}
+
+/* calendar detail modal */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
+  z-index:100;align-items:flex-end;justify-content:center;
+}
+.modal-backdrop.open{display:flex;}
+.modal-sheet{
+  background:var(--card);border:1px solid var(--line);border-radius:22px 22px 0 0;
+  width:100%;max-width:480px;max-height:75vh;overflow-y:auto;padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+  animation:slideUp .25s ease;
+}
+@media(min-width:860px){
+  .modal-backdrop{align-items:center;}
+  .modal-sheet{border-radius:20px;max-width:420px;}
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-handle{width:36px;height:4px;background:var(--line);border-radius:99px;margin:0 auto 14px;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.modal-header h2{font-family:var(--font-d);font-size:16px;margin:0;}
+.modal-close{background:var(--card-2);border:none;color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;}
+.modal-body .ex-block:last-child{margin-bottom:0;}
 .ex-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px dashed var(--line);}
 .ex-row:first-of-type{border-top:none;}
 .ex-row .n{color:var(--text);}
@@ -171,8 +207,8 @@ nav.bottom button{
   flex:1;background:none;border:none;color:var(--muted);padding:8px 4px;
   display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;cursor:pointer;
 }
-nav.bottom button .ic{font-size:19px;}
-nav.bottom button.active{color:var(--accent);}
+nav.bottom button .ic{width:20px;height:20px;}
+nav.bottom button.active{color:var(--accent);background:var(--accent-soft);border-radius:12px;}
 nav.bottom .nav-brand{display:none;}
 
 .tab{display:none;}
@@ -209,40 +245,43 @@ nav.bottom .nav-brand{display:none;}
     width:100%;
   }
   nav.bottom button.active{background:var(--accent-soft);}
-  nav.bottom button .ic{font-size:16px;}
+  nav.bottom button .ic{width:18px;height:18px;}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div id="cloud-status" style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span id="cloud-status-text">☁ Conectando...</span>
-    <button class="btn small" style="width:auto;display:none;" id="cloud-btn">Reintentar</button>
+  <div class="app-header">
+    <button class="sync-dot" id="sync-dot" onclick="toggleSyncPanel()" aria-label="Estado de sincronización"></button>
+    <div class="app-header-logo">Progre<span>so</span></div>
+    <div class="date-chip" id="today-chip"></div>
   </div>
 
-  <div id="token-setup" class="card" style="display:none;">
-    <div class="card-h"><h2>Token de escritura (GitHub)</h2></div>
-    <div class="hint" style="margin-bottom:10px;">
-      Pega aquí tu Personal Access Token de GitHub (con permiso Contents: Read and write sobre este repo).
+  <div id="sync-panel" style="display:none;">
+    <div id="cloud-status" class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span id="cloud-status-text">☁ Conectando...</span>
+      <button class="btn small" style="width:auto;display:none;" id="cloud-btn">Reintentar</button>
     </div>
-    <div class="field"><input type="text" id="cfg-token" placeholder="github_pat_..."></div>
-    <button class="btn" onclick="saveTokenFromInput()">Generar enlace con token</button>
-    <div id="token-link-result" style="display:none;margin-top:12px;">
-      <div class="hint" style="margin-bottom:8px;">
-        Copia este enlace y ábrelo en Safari. Luego haz "Añadir a pantalla de inicio" <b>desde esa pestaña</b> — el icono llevará el token incluido para siempre, aunque el navegador olvide todo lo demás.
+
+    <div id="token-setup" class="card" style="display:none;">
+      <div class="card-h"><h2>Token de escritura (GitHub)</h2></div>
+      <div class="hint" style="margin-bottom:10px;">
+        Pega aquí tu Personal Access Token de GitHub (con permiso Contents: Read and write sobre este repo).
       </div>
-      <div class="field"><input type="text" id="token-link-output" readonly onclick="this.select()"></div>
-      <button class="btn ghost small" style="width:100%;" onclick="copyTokenLink()">Copiar enlace</button>
+      <div class="field"><input type="text" id="cfg-token" placeholder="github_pat_..."></div>
+      <button class="btn" onclick="saveTokenFromInput()">Generar enlace con token</button>
+      <div id="token-link-result" style="display:none;margin-top:12px;">
+        <div class="hint" style="margin-bottom:8px;">
+          Copia este enlace y ábrelo en Safari. Luego haz "Añadir a pantalla de inicio" <b>desde esa pestaña</b> — el icono llevará el token incluido para siempre, aunque el navegador olvide todo lo demás.
+        </div>
+        <div class="field"><input type="text" id="token-link-output" readonly onclick="this.select()"></div>
+        <button class="btn ghost small" style="width:100%;" onclick="copyTokenLink()">Copiar enlace</button>
+      </div>
     </div>
   </div>
 
   <div id="reminder-banner" style="display:none;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px;">
     ⚖ Hoy toca pesarse — no lo dejes para luego.
-  </div>
-
-  <div class="topbar">
-    <div class="brand">Progre<span class="dot">so</span></div>
-    <div class="date-chip" id="today-chip"></div>
   </div>
 
   <!-- INICIO -->
@@ -255,6 +294,16 @@ nav.bottom .nav-brand{display:none;}
     <div class="grid2">
       <div class="stat"><div class="l">Registros de peso</div><div class="v" id="stat-wcount">0</div></div>
       <div class="stat"><div class="l">Sesiones logueadas</div><div class="v" id="stat-scount">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2 id="mini-cal-label">Este mes</h2></div>
+      <div class="cal-legend">
+        <span><i class="dot dot-weight"></i>Peso</span>
+        <span><i class="dot dot-workout"></i>Entreno</span>
+        <span><i class="dot dot-rest"></i>Descanso</span>
+      </div>
+      <div class="cal-grid" id="cal-grid-mini"></div>
     </div>
 
     <div class="charts-row">
@@ -364,19 +413,38 @@ nav.bottom .nav-brand{display:none;}
       </div>
       <div class="cal-grid" id="cal-grid"></div>
     </div>
-    <div class="card" id="cal-detail" style="display:none;">
-      <div class="card-h"><h2 id="cal-detail-date">—</h2></div>
-      <div id="cal-detail-body"></div>
+  </div>
+</div>
+
+<div id="cal-modal-backdrop" class="modal-backdrop" onclick="closeCalDetail(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="cal-detail-date">—</h2>
+      <button class="modal-close" onclick="closeCalDetail()">✕</button>
     </div>
+    <div id="cal-detail-body" class="modal-body"></div>
   </div>
 </div>
 
 <nav class="bottom">
   <span class="nav-brand">Progre<span>so</span></span>
-  <button data-tab="inicio" class="active"><span class="ic">◎</span>Inicio</button>
-  <button data-tab="peso"><span class="ic">⚖</span>Peso</button>
-  <button data-tab="entreno"><span class="ic">🏋</span>Entreno</button>
-  <button data-tab="calendario"><span class="ic">📅</span>Calendario</button>
+  <button data-tab="inicio" class="active">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h5v-5h2v5h5v-9"/></svg>
+    Inicio
+  </button>
+  <button data-tab="peso">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="13" r="2.5"/><path d="M12 6.5v2.5"/></svg>
+    Peso
+  </button>
+  <button data-tab="entreno">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 9v6M20 9v6M7 8v8M17 8v8"/></svg>
+    Entreno
+  </button>
+  <button data-tab="calendario">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>
+    Calendario
+  </button>
 </nav>
 
 <script>
@@ -449,12 +517,19 @@ function saveGhToken(t){
 function setCloudStatus(mode, extra){
   const el = document.getElementById('cloud-status-text');
   const btn = document.getElementById('cloud-btn');
+  const dot = document.getElementById('sync-dot');
   btn.style.display = 'none';
-  if(mode==='connected'){ el.innerHTML = '☁ Sincronizado con GitHub.'; }
-  else if(mode==='readonly'){ el.innerHTML = '☁ Leyendo bien, pero sin token de escritura guardado.'; btn.textContent='Configurar escritura'; btn.style.display='inline-block'; btn.onclick=toggleTokenSetup; }
-  else if(mode==='saving'){ el.textContent = '☁ Guardando...'; }
-  else if(mode==='error'){ el.innerHTML = `⚠ Error de sincronización${extra?': '+extra:''}.`; btn.textContent='Reintentar'; btn.style.display='inline-block'; btn.onclick=()=>loadFromCloud(); }
+  dot.classList.remove('ok','bad');
+  if(mode==='connected'){ el.innerHTML = '☁ Sincronizado con GitHub.'; dot.classList.add('ok'); }
+  else if(mode==='readonly'){ el.innerHTML = '☁ Leyendo bien, pero sin token de escritura guardado.'; btn.textContent='Configurar escritura'; btn.style.display='inline-block'; btn.onclick=toggleTokenSetup; dot.classList.add('bad'); }
+  else if(mode==='saving'){ el.textContent = '☁ Guardando...'; dot.classList.add('ok'); }
+  else if(mode==='error'){ el.innerHTML = `⚠ Error de sincronización${extra?': '+extra:''}.`; btn.textContent='Reintentar'; btn.style.display='inline-block'; btn.onclick=()=>loadFromCloud(); dot.classList.add('bad'); }
   else { el.textContent = '☁ Conectando...'; }
+}
+
+function toggleSyncPanel(){
+  const el = document.getElementById('sync-panel');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
 }
 
 function toggleTokenSetup(){
@@ -839,26 +914,21 @@ function calShiftMonth(delta){
   if(calMonth>11){ calMonth=0; calYear++; }
   renderCalendar();
 }
-function renderCalendar(){
-  const label = document.getElementById('cal-month-label');
-  const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  label.textContent = `${names[calMonth]} ${calYear}`;
-
-  const grid = document.getElementById('cal-grid');
+function buildCalGrid(gridEl, year, month){
   const dowLabels = ['L','M','X','J','V','S','D'];
   let html = dowLabels.map(d=>`<div class="cal-dow">${d}</div>`).join('');
 
-  const firstDay = new Date(calYear, calMonth, 1);
+  const firstDay = new Date(year, month, 1);
   let startOffset = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1; // lunes=0
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
 
   const weightDates = new Set(weights.map(w=>w.date));
   const sessionDates = new Set(sessions.map(s=>s.date));
 
   for(let i=0;i<startOffset;i++) html += `<div class="cal-day empty"></div>`;
   for(let d=1; d<=daysInMonth; d++){
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dow = new Date(calYear, calMonth, d).getDay();
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(year, month, d).getDay();
     const hasWeight = weightDates.has(dateStr);
     const hasWorkout = sessionDates.has(dateStr);
     const rest = isRestDow(dow);
@@ -870,12 +940,21 @@ function renderCalendar(){
       ${d}<div class="dots">${dots}</div>
     </div>`;
   }
-  grid.innerHTML = html;
+  gridEl.innerHTML = html;
+}
+function renderCalendar(){
+  const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-month-label').textContent = `${names[calMonth]} ${calYear}`;
+  buildCalGrid(document.getElementById('cal-grid'), calYear, calMonth);
+
+  const now = new Date();
+  const miniLabel = document.getElementById('mini-cal-label');
+  miniLabel.textContent = `${names[now.getMonth()]} ${now.getFullYear()}`;
+  buildCalGrid(document.getElementById('cal-grid-mini'), now.getFullYear(), now.getMonth());
 }
 function showCalDetail(dateStr){
-  const panel = document.getElementById('cal-detail');
-  const body = document.getElementById('cal-detail-body');
   document.getElementById('cal-detail-date').textContent = dateStr;
+  const body = document.getElementById('cal-detail-body');
   const w = weights.find(x=>x.date===dateStr);
   const s = sessions.find(x=>x.date===dateStr);
   let html = '';
@@ -886,8 +965,11 @@ function showCalDetail(dateStr){
     html = `<div class="empty">${isRestDow(dow)?'Día de descanso.':'Nada registrado ese día.'}</div>`;
   }
   body.innerHTML = html;
-  panel.style.display='block';
-  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  document.getElementById('cal-modal-backdrop').classList.add('open');
+}
+function closeCalDetail(e){
+  if(e) e.stopPropagation();
+  document.getElementById('cal-modal-backdrop').classList.remove('open');
 }
 
 async function saveSession(){
