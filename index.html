@@ -92,7 +92,7 @@ html,body{overflow-x:hidden;}
 .stat .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 .stat .v{font-family:var(--font-d);font-size:20px;font-weight:600;margin-top:3px;}
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;overflow:hidden;}
 .card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
 .card-h h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .card-h h2{font-family:var(--font-d);font-size:15px;margin:0;font-weight:600;}
@@ -108,6 +108,10 @@ canvas{max-height:220px;}
 .field input, .field select, .field textarea{
   width:100%;min-width:0;box-sizing:border-box;background:var(--card-2);border:1px solid var(--line);color:var(--text);
   padding:12px 14px;border-radius:12px;font-size:15px;font-family:var(--font-b);
+}
+input[type="date"]{
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  -webkit-appearance:none;appearance:none;
 }
 .big-input{font-family:var(--font-d);font-size:28px;font-weight:600;text-align:center;padding:14px;}
 textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;}
