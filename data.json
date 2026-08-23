@@ -1,0 +1,80 @@
+{
+  "weights": [
+    {
+      "date": "2026-08-17",
+      "value": 101.7,
+      "flag": ""
+    },
+    {
+      "date": "2026-08-20",
+      "value": 101,
+      "flag": ""
+    },
+    {
+      "date": "2026-08-23",
+      "value": 99.5,
+      "flag": ""
+    }
+  ],
+  "sessions": [
+    {
+      "date": "2026-08-17",
+      "lines": [
+        "Remo T 2*9,8*55",
+        "Remo Prono Maq 2*8,8*60",
+        "Remo Maq Gris 2*9*65",
+        "Curl Pred 2*8,6*55",
+        "Curl Manc 2*12*17.5",
+        "Curl Bayesian 2*9*22.5",
+        "Abdominales 3*10*70"
+      ]
+    },
+    {
+      "date": "2026-08-18",
+      "lines": [
+        "Militar Maq 1*7*37.5;1*7*35",
+        "Press Inf Cables 2*10,8*50",
+        "Posterior Maq 2*10*62.5",
+        "Laterales Polea 3*10,9,8*12.5",
+        "Triceps Barra 3*11,8,8*62.5",
+        "Triceps Uni 2*7,7*22.5",
+        "Fondos 2*15*90"
+      ]
+    },
+    {
+      "date": "2026-08-19",
+      "lines": [
+        "Femoral Sentado 2*10*70",
+        "Hack SQ 1*8,7*40",
+        "Prensa 3*8*70",
+        "Ext Cuadriceps 2*10,9*90",
+        "Ext Gemelo 2*15,12*90",
+        "Abdominales 3*10*70"
+      ]
+    },
+    {
+      "date": "2026-08-21",
+      "lines": [
+        "Jalon Prono 2*8,8*77",
+        "Remo Uni Polea Alta 2*9,9*70",
+        "Remo MaqBiGrisEnt 2*9*90",
+        "Pullover Polea 2*9,7*57",
+        "Curl Pred 2*8,7*55",
+        "Curl Manc 2*14,14*20",
+        "Curl Anilla 1*5*30;1*8*22.5"
+      ]
+    },
+    {
+      "date": "2026-08-22",
+      "lines": [
+        "Press Plano 1*8*65:1*9*60",
+        "Press S Inclinado 2*10,8*25",
+        "Laterales Polea 3*10*12.5",
+        "Aperturas Maq 2*9,8*85",
+        "Triceps Barra 3*11,10,8*62.5",
+        "Tricep Uni 2*8*22.5",
+        "Fondos 2*15*90"
+      ]
+    }
+  ]
+}
