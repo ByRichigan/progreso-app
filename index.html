@@ -187,18 +187,17 @@ nav.bottom .nav-brand{display:none;}
 <body>
 <div class="wrap">
   <div id="cloud-status" style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span id="cloud-status-text">☁ Sin configurar — tus datos no se sincronizarán entre dispositivos.</span>
-    <button class="btn small" style="width:auto;" onclick="toggleCloudSetup()" id="cloud-btn">Configurar nube</button>
+    <span id="cloud-status-text">☁ Conectando...</span>
+    <button class="btn small" style="width:auto;display:none;" id="cloud-btn">Reintentar</button>
   </div>
 
-  <div id="cloud-setup" class="card" style="display:none;">
-    <div class="card-h"><h2>Conectar almacenamiento en la nube (JSONBin.io)</h2></div>
+  <div id="token-setup" class="card" style="display:none;">
+    <div class="card-h"><h2>Token de escritura (GitHub)</h2></div>
     <div class="hint" style="margin-bottom:10px;">
-      1. Crea una cuenta gratis en <b>jsonbin.io</b> → 2. Crea un Bin nuevo con contenido <code>{}</code> → 3. Copia el <b>Bin ID</b> (de la URL del bin) y tu <b>X-Master-Key</b> (en tu perfil, API Keys) → 4. Pégalos aquí.
+      Pega aquí tu Personal Access Token de GitHub (con permiso Contents: Read and write sobre este repo). Se guarda solo en este dispositivo, nunca en el código público.
     </div>
-    <div class="field"><label>Bin ID</label><input type="text" id="cfg-binid" placeholder="68a1c2..."></div>
-    <div class="field"><label>X-Master-Key</label><input type="text" id="cfg-key" placeholder="$2a$10$..."></div>
-    <button class="btn" onclick="saveCloudConfig()">Guardar y conectar</button>
+    <div class="field"><input type="text" id="cfg-token" placeholder="github_pat_..."></div>
+    <button class="btn" onclick="saveTokenFromInput()">Guardar en este dispositivo</button>
   </div>
 
   <div id="reminder-banner" style="display:none;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px;">
@@ -345,60 +344,73 @@ function buildSeedSessions(){
 }
 sessions = buildSeedSessions();
 
-// ---------- CLOUD PERSISTENCE (JSONBin.io) ----------
-let cloudConfig = null; // {binId, key}
+// ---------- CLOUD PERSISTENCE (GitHub repo, data.json) ----------
+const GH_OWNER = 'ByRichigan';
+const GH_REPO = 'progreso-app';
+const GH_PATH = 'data.json';
+let ghSha = null; // sha del último contenido leído, necesario para poder escribir
+let ghToken = null; // token de escritura — se guarda localmente, nunca en el código
 
-function loadCloudConfig(){
-  try{
-    const raw = localStorage.getItem('progreso_cloud_cfg');
-    cloudConfig = raw ? JSON.parse(raw) : null;
-  }catch(e){ cloudConfig = null; }
+function loadGhToken(){
+  try{ ghToken = localStorage.getItem('progreso_gh_token') || null; }
+  catch(e){ ghToken = null; }
 }
+function saveGhToken(t){
+  ghToken = t;
+  try{
+    localStorage.setItem('progreso_gh_token', t);
+    const check = localStorage.getItem('progreso_gh_token');
+    return check === t; // confirma de verdad que se ha guardado, no solo que no ha dado error
+  }catch(e){ return false; }
+}
+
 function setCloudStatus(mode, extra){
   const el = document.getElementById('cloud-status-text');
   const btn = document.getElementById('cloud-btn');
-  if(mode==='connected'){ el.innerHTML = '☁ Sincronizado — los cambios se guardan en la nube.'; btn.textContent='Configuración'; }
+  btn.style.display = 'none';
+  if(mode==='connected'){ el.innerHTML = '☁ Sincronizado con GitHub.'; }
+  else if(mode==='readonly'){ el.innerHTML = '☁ Leyendo bien, pero sin token de escritura guardado.'; btn.textContent='Configurar escritura'; btn.style.display='inline-block'; btn.onclick=toggleTokenSetup; }
   else if(mode==='saving'){ el.textContent = '☁ Guardando...'; }
-  else if(mode==='error'){ el.innerHTML = `⚠ Error de sincronización${extra?': '+extra:''}. Revisa tu Bin ID / API key.`; btn.textContent='Configuración'; }
-  else { el.textContent = '☁ Sin configurar — tus datos no se sincronizarán entre dispositivos.'; btn.textContent='Configurar nube'; }
-}
-function toggleCloudSetup(){
-  const el = document.getElementById('cloud-setup');
-  el.style.display = el.style.display==='none' ? 'block' : 'none';
-  if(cloudConfig){
-    document.getElementById('cfg-binid').value = cloudConfig.binId;
-    document.getElementById('cfg-key').value = cloudConfig.key;
-  }
-}
-async function saveCloudConfig(){
-  const binId = document.getElementById('cfg-binid').value.trim();
-  const key = document.getElementById('cfg-key').value.trim();
-  if(!binId || !key){ alert('Rellena el Bin ID y la API key.'); return; }
-  cloudConfig = {binId, key};
-  localStorage.setItem('progreso_cloud_cfg', JSON.stringify(cloudConfig));
-  document.getElementById('cloud-setup').style.display='none';
-  await loadFromCloud(true);
+  else if(mode==='error'){ el.innerHTML = `⚠ Error de sincronización${extra?': '+extra:''}.`; btn.textContent='Reintentar'; btn.style.display='inline-block'; btn.onclick=()=>loadFromCloud(); }
+  else { el.textContent = '☁ Conectando...'; }
 }
 
-async function loadFromCloud(pushSeedIfEmpty){
-  if(!cloudConfig) return;
+function toggleTokenSetup(){
+  const el = document.getElementById('token-setup');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+function saveTokenFromInput(){
+  const t = document.getElementById('cfg-token').value.trim();
+  if(!t){ alert('Pega el token.'); return; }
+  const ok = saveGhToken(t);
+  document.getElementById('token-setup').style.display='none';
+  if(ok){
+    alert('Token guardado correctamente en este dispositivo.');
+    setCloudStatus('connected');
+  } else {
+    alert('OJO: el navegador no ha confirmado el guardado. Puede que necesites configurarlo cada vez en este dispositivo.');
+  }
+}
+
+async function loadFromCloud(){
+  loadGhToken();
+  setCloudStatus('none');
   try{
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${cloudConfig.binId}/latest`, {
-      headers:{'X-Master-Key':cloudConfig.key}
+    // la lectura no necesita token: el repo es público
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+      headers:{'Accept':'application/vnd.github+json'}
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
-    const record = data.record || {};
+    ghSha = data.sha;
+    const record = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))));
     if(record.weights && record.weights.length){
       weights = record.weights;
       sessions = (record.sessions||[]).map(s=>({date:s.date, exercises: parseNote(s.lines.join('\n'))}));
       weights.sort((a,b)=>a.date.localeCompare(b.date));
       sessions.sort((a,b)=>a.date.localeCompare(b.date));
-    } else if(pushSeedIfEmpty && weights.length){
-      // el bin está vacío: sube lo que ya tengamos cargado (los datos iniciales)
-      await saveToCloud();
     }
-    setCloudStatus('connected');
+    setCloudStatus(ghToken ? 'connected' : 'readonly');
     render();
   }catch(e){
     setCloudStatus('error', e.message);
@@ -406,19 +418,28 @@ async function loadFromCloud(pushSeedIfEmpty){
 }
 
 async function saveToCloud(){
-  if(!cloudConfig) return;
+  if(!ghToken){ setCloudStatus('readonly'); return; }
   setCloudStatus('saving');
   try{
     const payload = {
       weights,
       sessions: sessions.map(s=>({date:s.date, lines: s.exercises.map(ex=>`${ex.name||ex.raw} ${serializeBlocks(ex)}`.trim())}))
     };
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${cloudConfig.binId}`, {
+    const contentB64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+    const body = {
+      message: 'Actualiza datos — '+new Date().toISOString(),
+      content: contentB64,
+      branch: 'main'
+    };
+    if(ghSha) body.sha = ghSha;
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
       method:'PUT',
-      headers:{'Content-Type':'application/json', 'X-Master-Key':cloudConfig.key},
-      body:JSON.stringify(payload)
+      headers:{'Authorization':'Bearer '+ghToken, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json'},
+      body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    ghSha = data.content.sha; // guardamos el nuevo sha para el próximo guardado
     setCloudStatus('connected');
   }catch(e){
     setCloudStatus('error', e.message);
@@ -471,10 +492,8 @@ function checkReminder(){
 }
 
 async function loadAll(){
-  loadCloudConfig();
   render();
-  if(cloudConfig){ await loadFromCloud(true); }
-  else { setCloudStatus('none'); }
+  await loadFromCloud();
   checkReminder();
 }
 async function saveW(){ await persist(); checkReminder(); }
