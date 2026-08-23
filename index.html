@@ -119,6 +119,36 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .session-card{background:var(--card-2);border-radius:12px;padding:13px;margin-bottom:8px;}
 .session-card .top{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
 .session-card .top b{color:var(--text);}
+
+/* day-form */
+.ex-block{background:var(--card-2);border-radius:12px;padding:12px 13px;margin-bottom:8px;}
+.ex-block .ex-name{font-weight:600;font-size:13.5px;margin-bottom:2px;}
+.ex-block .ex-last{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.ex-block .ex-last .up{color:var(--good);}
+.ex-block .ex-last .down{color:var(--bad);}
+.ex-row-inputs{display:grid;grid-template-columns:56px 1fr 70px 28px;gap:6px;margin-bottom:6px;align-items:center;}
+.ex-row-inputs input{padding:8px 6px;font-size:13px;text-align:center;}
+.ex-row-inputs .rm{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+.ex-add-block{background:none;border:1px dashed var(--line);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;width:100%;margin-top:2px;}
+
+/* calendar */
+.cal-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;}
+.cal-legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+.dot-weight{background:var(--good);}
+.dot-workout{background:var(--accent);}
+.dot-rest{background:var(--muted);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:4px;}
+.cal-day{
+  aspect-ratio:1;border-radius:10px;background:var(--card-2);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:12px;cursor:pointer;position:relative;gap:2px;
+  border:1px solid transparent;
+}
+.cal-day.empty{background:transparent;cursor:default;}
+.cal-day.today{border-color:var(--accent);}
+.cal-day.rest-day{opacity:.55;}
+.cal-day .dots{display:flex;gap:2px;position:absolute;bottom:4px;}
+.cal-day .dots i{width:5px;height:5px;border-radius:50%;}
 .ex-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px dashed var(--line);}
 .ex-row:first-of-type{border-top:none;}
 .ex-row .n{color:var(--text);}
@@ -283,14 +313,27 @@ nav.bottom .nav-brand{display:none;}
   <!-- ENTRENO -->
   <div class="tab" id="tab-entreno">
     <div class="card">
-      <div class="card-h"><h2>Pegar nota del entreno</h2></div>
-      <div class="field"><input type="date" id="s-date"></div>
-      <div class="field">
-        <textarea id="s-note" placeholder="Jalón Prono 2*8'5,8*77&#10;Remo Uni Polea Alta 2*9,9*70&#10;Curl Anilla 1*8*30;2*8*22,5"></textarea>
+      <div class="card-h">
+        <h2 id="day-form-title">Entreno de hoy</h2>
+        <select id="day-picker" onchange="renderDayForm()"></select>
       </div>
-      <button class="btn ghost" onclick="analyzeNote()">Analizar</button>
-      <div class="hint">Formato: Ejercicio + series*reps*peso. Usa ; o : para separar bloques de la misma línea (dropsets, dos grupos de series distintas).</div>
+      <div class="field"><label>Fecha</label><input type="date" id="day-date"></div>
+      <div id="day-form-exercises"></div>
+      <div id="day-form-rest" class="empty" style="display:none;">Hoy toca descanso — nada que registrar.</div>
+      <button class="btn" id="day-form-save" onclick="saveDayForm()" style="margin-top:6px;">Guardar entreno</button>
     </div>
+
+    <details class="card" id="advanced-note-card">
+      <summary style="cursor:pointer;font-family:var(--font-d);font-weight:600;font-size:14px;">📝 Avanzado: pegar nota en formato libre</summary>
+      <div style="margin-top:12px;">
+        <div class="field"><input type="date" id="s-date"></div>
+        <div class="field">
+          <textarea id="s-note" placeholder="Jalón Prono 2*8'5,8*77&#10;Remo Uni Polea Alta 2*9,9*70&#10;Curl Anilla 1*8*30;2*8*22,5"></textarea>
+        </div>
+        <button class="btn ghost" onclick="analyzeNote()">Analizar</button>
+        <div class="hint">Formato: Ejercicio + series*reps*peso. Usa ; o : para separar bloques de la misma línea (dropsets, dos grupos de series distintas).</div>
+      </div>
+    </details>
 
     <div class="card" id="preview-card" style="display:none;">
       <div class="card-h"><h2>Vista previa</h2></div>
@@ -303,6 +346,29 @@ nav.bottom .nav-brand{display:none;}
       <div id="session-log"></div>
     </div>
   </div>
+
+  <!-- CALENDARIO -->
+  <div class="tab" id="tab-calendario">
+    <div class="card">
+      <div class="card-h">
+        <h2 id="cal-month-label">—</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="btn ghost small" onclick="calShiftMonth(-1)">‹</button>
+          <button class="btn ghost small" onclick="calShiftMonth(1)">›</button>
+        </div>
+      </div>
+      <div class="cal-legend">
+        <span><i class="dot dot-weight"></i>Peso</span>
+        <span><i class="dot dot-workout"></i>Entreno</span>
+        <span><i class="dot dot-rest"></i>Descanso</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div class="card" id="cal-detail" style="display:none;">
+      <div class="card-h"><h2 id="cal-detail-date">—</h2></div>
+      <div id="cal-detail-body"></div>
+    </div>
+  </div>
 </div>
 
 <nav class="bottom">
@@ -310,6 +376,7 @@ nav.bottom .nav-brand{display:none;}
   <button data-tab="inicio" class="active"><span class="ic">◎</span>Inicio</button>
   <button data-tab="peso"><span class="ic">⚖</span>Peso</button>
   <button data-tab="entreno"><span class="ic">🏋</span>Entreno</button>
+  <button data-tab="calendario"><span class="ic">📅</span>Calendario</button>
 </nav>
 
 <script>
@@ -607,6 +674,222 @@ function analyzeNote(){
   document.getElementById('preview-card').style.display='block';
 }
 
+// ---------- PLANTILLA DE RUTINA POR DÍA ----------
+const ROUTINE_TEMPLATE = {
+  espalda1: { label:'Espalda 1 (Densidad)', exercises:[
+    'Remo T','Remo Prono Maq','Remo Maq Gris','Curl Pred','Curl Manc','Curl Bayesian','Abdominales'
+  ]},
+  pecho1: { label:'Pecho 1 (Hombros)', exercises:[
+    'Militar Maq','Press Inf Cables','Posterior Maq','Laterales Polea','Triceps Barra','Triceps Uni','Fondos'
+  ]},
+  pierna1: { label:'Pierna 1 (Anterior)', exercises:[
+    'Femoral Sentado','Hack SQ','Prensa','Ext Cuadriceps','Ext Gemelo','Abdominales'
+  ]},
+  pierna2: { label:'Pierna 2 (Posterior)', exercises:[
+    'Aductor','Peso Rumano','Femoral Tumbado','Prensa Unil','Extensiones','Abdominales'
+  ]},
+  espalda2: { label:'Espalda 2 (Amplitud)', exercises:[
+    'Jalon Prono','Remo Uni Polea Alta','Remo MaqBiGrisEnt','Pullover Polea','Curl Pred','Curl Manc','Curl Anilla'
+  ]},
+  pecho2: { label:'Pecho 2', exercises:[
+    'Press Plano','Press S Inclinado','Laterales Polea','Aperturas Maq','Triceps Barra','Tricep Uni','Fondos'
+  ]},
+  descanso: { label:'Descanso', exercises:[] }
+};
+const LEG1_MARKER = 'Hack SQ', LEG2_MARKER = 'Aductor';
+
+function detectNextLegDay(){
+  for(let i=sessions.length-1;i>=0;i--){
+    const names = sessions[i].exercises.map(e=>e.name);
+    if(names.includes(LEG1_MARKER)) return 'pierna2';
+    if(names.includes(LEG2_MARKER)) return 'pierna1';
+  }
+  return 'pierna1';
+}
+function dayKeyForDate(dateStr){
+  const dow = new Date(dateStr+'T12:00:00').getDay(); // 0=domingo..6=sábado
+  if(dow===1) return 'espalda1';
+  if(dow===2) return 'pecho1';
+  if(dow===3) return detectNextLegDay();
+  if(dow===5) return 'espalda2';
+  if(dow===6) return 'pecho2';
+  return 'descanso'; // jueves y domingo
+}
+function isRestDow(dow){ return dow===4 || dow===0; }
+
+function lastBlocksFor(exerciseName){
+  for(let i=sessions.length-1;i>=0;i--){
+    const ex = sessions[i].exercises.find(e=>e.ok && e.name===exerciseName);
+    if(ex) return ex.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight}));
+  }
+  return null;
+}
+function prevBlocksFor(exerciseName){
+  // la penúltima vez (para poder comparar y mostrar flecha de progreso)
+  let found = 0;
+  for(let i=sessions.length-1;i>=0;i--){
+    const ex = sessions[i].exercises.find(e=>e.ok && e.name===exerciseName);
+    if(ex){ found++; if(found===2) return ex.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight})); }
+  }
+  return null;
+}
+
+function renderDayForm(){
+  const dateInput = document.getElementById('day-date');
+  const dayKey = document.getElementById('day-picker').value;
+  const tpl = ROUTINE_TEMPLATE[dayKey];
+  document.getElementById('day-form-title').textContent = tpl.label;
+  const holder = document.getElementById('day-form-exercises');
+  const restMsg = document.getElementById('day-form-rest');
+  const saveBtn = document.getElementById('day-form-save');
+
+  if(dayKey==='descanso' || tpl.exercises.length===0){
+    holder.innerHTML=''; restMsg.style.display='block'; saveBtn.style.display='none';
+    return;
+  }
+  restMsg.style.display='none'; saveBtn.style.display='block';
+
+  holder.innerHTML = tpl.exercises.map((name, exIdx)=>{
+    const last = lastBlocksFor(name);
+    const prev = prevBlocksFor(name);
+    const blocks = last && last.length ? last : [{series:2, reps:[10], weight:''}];
+    let lastHint = 'Sin registros previos';
+    if(last && last.length){
+      const topLast = Math.max(...last.map(b=>b.weight));
+      lastHint = `Última vez: ${topLast}kg`;
+      if(prev && prev.length){
+        const topPrev = Math.max(...prev.map(b=>b.weight));
+        if(topLast>topPrev) lastHint += ` <span class="up">▲ antes ${topPrev}kg</span>`;
+        else if(topLast<topPrev) lastHint += ` <span class="down">▼ antes ${topPrev}kg</span>`;
+        else lastHint += ` <span>= igual que antes</span>`;
+      }
+    }
+    const rowsHtml = blocks.map((b,bi)=>`
+      <div class="ex-row-inputs" data-ex="${exIdx}" data-block="${bi}">
+        <input type="number" class="f-series" value="${b.series}" placeholder="series">
+        <input type="text" class="f-reps" value="${b.reps.join(',')}" placeholder="reps (9,8)">
+        <input type="number" class="f-weight" value="${b.weight}" step="0.5" placeholder="kg">
+        <button class="rm" onclick="removeExRow(this)">✕</button>
+      </div>`).join('');
+    return `<div class="ex-block" data-exname="${name}">
+      <div class="ex-name">${name}</div>
+      <div class="ex-last">${lastHint}</div>
+      <div class="ex-rows">${rowsHtml}</div>
+      <button class="ex-add-block" onclick="addExRow(this)">+ bloque (dropset)</button>
+    </div>`;
+  }).join('');
+}
+
+function removeExRow(btn){
+  const row = btn.closest('.ex-row-inputs');
+  const rows = row.parentElement;
+  if(rows.children.length>1) row.remove();
+}
+function addExRow(btn){
+  const block = btn.closest('.ex-block');
+  const rows = block.querySelector('.ex-rows');
+  const div = document.createElement('div');
+  div.className='ex-row-inputs';
+  div.innerHTML = `<input type="number" class="f-series" value="1" placeholder="series">
+    <input type="text" class="f-reps" value="" placeholder="reps (9,8)">
+    <input type="number" class="f-weight" value="" step="0.5" placeholder="kg">
+    <button class="rm" onclick="removeExRow(this)">✕</button>`;
+  rows.appendChild(div);
+}
+
+async function saveDayForm(){
+  const date = document.getElementById('day-date').value || todayISO;
+  const blocks = document.querySelectorAll('#day-form-exercises .ex-block');
+  const exercises = [];
+  blocks.forEach(block=>{
+    const name = block.dataset.exname;
+    const rows = block.querySelectorAll('.ex-row-inputs');
+    const exBlocks = [];
+    rows.forEach(row=>{
+      const series = parseInt(row.querySelector('.f-series').value) || 0;
+      const repsRaw = row.querySelector('.f-reps').value.trim();
+      const weight = parseFloat(row.querySelector('.f-weight').value);
+      if(!series || !repsRaw || isNaN(weight)) return;
+      const reps = repsRaw.split(',').map(r=>parseFloat(r)).filter(n=>!isNaN(n));
+      if(reps.length) exBlocks.push({series, reps, weight});
+    });
+    if(exBlocks.length) exercises.push({name, blocks:exBlocks, raw:name, ok:true});
+  });
+  if(exercises.length===0){ alert('No has rellenado ningún ejercicio.'); return; }
+  sessions = sessions.filter(s=>s.date!==date);
+  sessions.push({date, exercises});
+  sessions.sort((a,b)=>a.date.localeCompare(b.date));
+  await saveS();
+  render();
+  alert('Entreno guardado.');
+}
+
+function initDayPicker(){
+  const sel = document.getElementById('day-picker');
+  sel.innerHTML = Object.entries(ROUTINE_TEMPLATE).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  const today = dayKeyForDate(todayISO);
+  sel.value = today;
+}
+
+// ---------- CALENDARIO ----------
+let calYear, calMonth; // calMonth 0-11
+function calShiftMonth(delta){
+  calMonth += delta;
+  if(calMonth<0){ calMonth=11; calYear--; }
+  if(calMonth>11){ calMonth=0; calYear++; }
+  renderCalendar();
+}
+function renderCalendar(){
+  const label = document.getElementById('cal-month-label');
+  const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  label.textContent = `${names[calMonth]} ${calYear}`;
+
+  const grid = document.getElementById('cal-grid');
+  const dowLabels = ['L','M','X','J','V','S','D'];
+  let html = dowLabels.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  let startOffset = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1; // lunes=0
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  const weightDates = new Set(weights.map(w=>w.date));
+  const sessionDates = new Set(sessions.map(s=>s.date));
+
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(calYear, calMonth, d).getDay();
+    const hasWeight = weightDates.has(dateStr);
+    const hasWorkout = sessionDates.has(dateStr);
+    const rest = isRestDow(dow);
+    const isToday = dateStr===todayISO;
+    let dots = '';
+    if(hasWeight) dots += '<i class="dot-weight"></i>';
+    if(hasWorkout) dots += '<i class="dot-workout"></i>';
+    html += `<div class="cal-day ${isToday?'today':''} ${rest?'rest-day':''}" onclick="showCalDetail('${dateStr}')">
+      ${d}<div class="dots">${dots}</div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+function showCalDetail(dateStr){
+  const panel = document.getElementById('cal-detail');
+  const body = document.getElementById('cal-detail-body');
+  document.getElementById('cal-detail-date').textContent = dateStr;
+  const w = weights.find(x=>x.date===dateStr);
+  const s = sessions.find(x=>x.date===dateStr);
+  let html = '';
+  if(w) html += `<div class="ex-block"><div class="ex-name">⚖ Peso</div><div class="ex-last">${w.value.toFixed(2)} kg · ${w.flag||'-'}</div></div>`;
+  if(s) html += s.exercises.map(ex=>`<div class="ex-block"><div class="ex-name">${ex.ok?ex.name:(ex.name||ex.raw)}</div><div class="ex-last">${ex.ok?ex.blocks.map(blockToLabel).join(' · '):'sin interpretar'}</div></div>`).join('');
+  if(!w && !s){
+    const dow = new Date(dateStr+'T12:00:00').getDay();
+    html = `<div class="empty">${isRestDow(dow)?'Día de descanso.':'Nada registrado ese día.'}</div>`;
+  }
+  body.innerHTML = html;
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 async function saveSession(){
   if(!lastPreview){ return; }
   const date = document.getElementById('s-date').value || todayISO;
@@ -780,11 +1063,17 @@ function render(){
   renderExerciseChart();
   renderWeightLog();
   renderSessionLog();
+  renderDayForm();
+  renderCalendar();
   checkReminder();
 }
 
 document.getElementById('w-date').valueAsDate = new Date();
 document.getElementById('s-date').valueAsDate = new Date();
+document.getElementById('day-date').valueAsDate = new Date();
+initDayPicker();
+const _now = new Date();
+calYear = _now.getFullYear(); calMonth = _now.getMonth();
 loadAll();
 </script>
 </body>
