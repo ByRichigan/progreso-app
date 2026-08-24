@@ -67,13 +67,25 @@
     {
       "date": "2026-08-22",
       "lines": [
-        "Press Plano 1*8*65:1*9*60",
+        "Press Plano 1*8*65;1*9*60",
         "Press S Inclinado 2*10,8*25",
         "Laterales Polea 3*10*12.5",
         "Aperturas Maq 2*9,8*85",
         "Triceps Barra 3*11,10,8*62.5",
         "Tricep Uni 2*8*22.5",
         "Fondos 2*15*90"
+      ]
+    },
+    {
+      "date": "2026-08-24",
+      "lines": [
+        "Remo T 2*9,9*55",
+        "Remo Prono Maq 2*9,8*60",
+        "Remo Maq Gris 2*10,10*65",
+        "Curl Pred 2*8,6*55",
+        "Curl Manc 2*14,14*20",
+        "Curl Bayesian 2*10,10*22.5",
+        "Abdominales 3*10*70"
       ]
     }
   ]
