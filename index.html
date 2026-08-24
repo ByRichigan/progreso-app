@@ -142,6 +142,7 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .session-card .top .date-info b{color:var(--text);font-family:var(--font-d);font-size:15px;}
 .session-card .top .date-info .dow{font-size:11px;color:var(--accent);text-transform:capitalize;font-weight:600;}
 .session-card .top .count-badge{font-size:10.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:3px 9px;border-radius:99px;white-space:nowrap;}
+.session-card .top .day-tag{font-size:10.5px;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:99px;white-space:nowrap;font-weight:600;}
 .session-card .ex-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 0;border-top:1px dashed var(--line);}
 .session-card .ex-row:first-of-type{border-top:none;padding-top:0;}
 .session-card .ex-row .n{font-weight:600;color:var(--text);}
@@ -1260,6 +1261,17 @@ function renderWeightLog(){
     </div>`).join('');
 }
 
+function labelForSession(s){
+  const names = new Set(s.exercises.filter(e=>e.ok).map(e=>e.name));
+  let best = null, bestScore = 0;
+  Object.entries(ROUTINE_TEMPLATE).forEach(([key, tpl])=>{
+    if(key==='descanso') return;
+    const score = tpl.exercises.filter(n=>names.has(n)).length;
+    if(score>bestScore){ bestScore=score; best=tpl.label; }
+  });
+  return bestScore>0 ? best : 'Entreno libre';
+}
+
 function renderSessionLog(){
   const el = document.getElementById('session-log');
   if(sessions.length===0){ el.innerHTML='<div class="empty">Sin sesiones aún</div>'; return; }
@@ -1270,7 +1282,10 @@ function renderSessionLog(){
     <div class="session-card">
       <div class="top">
         <div class="date-info"><b>${s.date}</b><span class="dow">${dow}</span></div>
-        <span class="count-badge">${s.exercises.filter(e=>e.ok).length} ejercicios</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span class="day-tag">${labelForSession(s)}</span>
+          <span class="count-badge">${s.exercises.filter(e=>e.ok).length} ejercicios</span>
+        </div>
       </div>
       ${s.exercises.map(ex=>{
         if(!ex.ok) return `<div class="ex-row"><span class="n">${ex.name||ex.raw}</span><span class="s">sin interpretar</span></div>`;
