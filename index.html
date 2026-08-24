@@ -168,6 +168,20 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .locked-check b{font-size:14px;}
 .locked-check .sub2{font-size:11.5px;color:var(--muted);margin-top:1px;}
 
+/* comparativa semanal de volumen */
+.week-vol-row{display:flex;gap:6px;margin-top:10px;}
+.week-vol-chip{
+  flex:1;min-width:0;background:var(--card-2);border-radius:12px;padding:9px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;
+}
+.week-vol-chip .dow{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.week-vol-chip .val{font-family:var(--font-d);font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+.week-vol-chip .delta{font-size:9.5px;font-weight:600;white-space:nowrap;}
+.week-vol-chip .delta.up{color:var(--good);}
+.week-vol-chip .delta.down{color:var(--bad);}
+.week-vol-chip .delta.flat{color:var(--muted);}
+.week-vol-chip.pending{opacity:.4;}
+
 /* calendar */
 .cal-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;}
 .cal-legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
@@ -331,7 +345,8 @@ nav.bottom .nav-brand{display:none;}
 
     <div class="card" id="week-compare-card">
       <div class="card-h"><h2>Esta semana vs anterior</h2></div>
-      <div class="grid2" id="week-compare-body"></div>
+      <div id="week-compare-weight"></div>
+      <div class="week-vol-row" id="week-compare-vol"></div>
     </div>
 
     <div class="charts-row">
@@ -1134,7 +1149,8 @@ function weeklyBuckets(){
   return map;
 }
 function renderWeekCompare(){
-  const body = document.getElementById('week-compare-body');
+  const weightHolder = document.getElementById('week-compare-weight');
+  const volHolder = document.getElementById('week-compare-vol');
   const thisMonday = mondayOf(todayISO);
   const lastMonday = shiftDate(thisMonday, -7);
   const buckets = weeklyBuckets();
@@ -1144,24 +1160,57 @@ function renderWeekCompare(){
   const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
   const curAvgW = avg(cur.weights), prevAvgW = avg(prev.weights);
 
-  function statHtml(label, curVal, prevVal, unit, lowerIsBetter){
-    if(curVal===null){ return `<div class="stat"><div class="l">${label}</div><div class="v" style="font-size:14px;color:var(--muted);">Sin datos aún</div></div>`; }
-    let deltaHtml = '';
-    if(prevVal!==null && prevVal!==0){
-      const diff = curVal-prevVal;
-      const good = lowerIsBetter ? diff<0 : diff>0;
+  // --- peso medio (sin cambios de comportamiento) ---
+  let weightHtml;
+  if(curAvgW===null){
+    weightHtml = `<div class="stat"><div class="l">Peso medio</div><div class="v" style="font-size:14px;color:var(--muted);">Sin datos aún</div></div>`;
+  } else {
+    let deltaHtml = '<div class="sub">Sin semana anterior para comparar</div>';
+    if(prevAvgW!==null){
+      const diff = curAvgW-prevAvgW;
+      const good = diff<0;
       const arrow = diff===0 ? '=' : (diff>0?'▲':'▼');
-      deltaHtml = `<div class="sub" style="color:${diff===0?'var(--muted)':(good?'var(--good)':'var(--bad)')}">${arrow} ${Math.abs(diff).toFixed(1)}${unit} vs semana pasada</div>`;
-    } else {
-      deltaHtml = `<div class="sub">Sin semana anterior para comparar</div>`;
+      deltaHtml = `<div class="sub" style="color:${diff===0?'var(--muted)':(good?'var(--good)':'var(--bad)')}">${arrow} ${Math.abs(diff).toFixed(1)} kg vs semana pasada</div>`;
     }
-    return `<div class="stat"><div class="l">${label}</div><div class="v">${curVal.toFixed(1)}${unit}</div>${deltaHtml}</div>`;
+    weightHtml = `<div class="stat"><div class="l">Peso medio</div><div class="v">${curAvgW.toFixed(1)} kg</div>${deltaHtml}</div>`;
   }
+  weightHolder.innerHTML = weightHtml;
 
-  body.innerHTML =
-    statHtml('Peso medio', curAvgW, prevAvgW, ' kg', true) +
-    statHtml('Volumen total', cur.vol, prev.vol, ' kg', false);
+  // --- volumen día a día (solo días de entreno: L,M,X,V,S — no jueves/domingo) ---
+  const dowShort = {1:'Lun',2:'Mar',3:'Mié',5:'Vie',6:'Sáb'};
+  const trainingDows = [1,2,3,5,6];
+  const sessByDate = {}; sessions.forEach(s=>{ sessByDate[s.date] = sessionVolume(s); });
+
+  let chips = '';
+  trainingDows.forEach(dow=>{
+    const offset = dow===0 ? 6 : dow-1; // días desde el lunes
+    const curDate = shiftDate(thisMonday, offset);
+    if(curDate>todayISO) return; // aún no ha llegado — lo ocultamos
+    const prevDate = shiftDate(lastMonday, offset);
+    const curVol = sessByDate[curDate] || 0;
+    const hasPrev = sessByDate[prevDate]!==undefined;
+    const prevVol = sessByDate[prevDate] || 0;
+    const hasCur = sessByDate[curDate]!==undefined;
+
+    let deltaHtml = '';
+    if(hasCur && hasPrev){
+      const diff = curVol-prevVol;
+      const cls = diff===0 ? 'flat' : (diff>0?'up':'down');
+      const arrow = diff===0 ? '=' : (diff>0?'▲':'▼');
+      const pct = prevVol!==0 ? Math.abs(diff/prevVol*100).toFixed(0)+'%' : '';
+      deltaHtml = `<div class="delta ${cls}">${arrow}${pct?(' '+pct):''}</div>`;
+    } else if(hasCur && !hasPrev){
+      deltaHtml = `<div class="delta flat">nuevo</div>`;
+    }
+    chips += `<div class="week-vol-chip ${hasCur?'':'pending'}">
+      <div class="dow">${dowShort[dow]}</div>
+      <div class="val">${hasCur ? Math.round(curVol).toLocaleString('es-ES')+'kg' : '—'}</div>
+      ${deltaHtml}
+    </div>`;
+  });
+  volHolder.innerHTML = chips || '<div class="empty" style="padding:10px 0;">Aún no hay días de esta semana para comparar</div>';
 }
+
 
 let chartVolumenSemana;
 function renderVolumeWeekChart(){
