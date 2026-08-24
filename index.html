@@ -222,6 +222,30 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .modal-header h2{font-family:var(--font-d);font-size:16px;margin:0;}
 .modal-close{background:var(--card-2);border:none;color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;}
 .modal-body .ex-block:last-child{margin-bottom:0;}
+
+/* confirmación */
+.confirm-backdrop{align-items:center;}
+.confirm-sheet{max-width:340px;border-radius:20px;text-align:center;}
+.confirm-message{font-size:14.5px;color:var(--text);margin:4px 0 18px;line-height:1.5;}
+.confirm-actions{display:flex;gap:10px;}
+.confirm-actions .btn{flex:1;}
+.btn.danger-btn{background:var(--bad);color:#fff;border:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;}
+
+/* toasts */
+.toast-holder{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:200;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:100%;max-width:440px;padding:0 16px;
+}
+@media(min-width:860px){ .toast-holder{bottom:24px;} }
+.toast{
+  background:var(--card-2);border:1px solid var(--line);color:var(--text);
+  padding:12px 18px;border-radius:99px;font-size:13px;font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(10px);
+  transition:opacity .25s ease, transform .25s ease;max-width:100%;text-align:center;
+}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast-ok{border-color:var(--accent);}
+.toast-error{border-color:var(--bad);color:#ffd7db;}
 .ex-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px dashed var(--line);}
 .ex-row:first-of-type{border-top:none;}
 .ex-row .n{color:var(--text);}
@@ -476,6 +500,19 @@ nav.bottom .nav-brand{display:none;}
   </div>
 </div>
 
+<div id="confirm-backdrop" class="modal-backdrop confirm-backdrop">
+  <div class="modal-sheet confirm-sheet">
+    <div class="modal-handle"></div>
+    <p id="confirm-message" class="confirm-message">—</p>
+    <div class="confirm-actions">
+      <button class="btn ghost" id="confirm-no">Cancelar</button>
+      <button class="btn danger-btn" id="confirm-yes">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-holder" class="toast-holder"></div>
+
 <nav class="bottom">
   <span class="nav-brand">Progre<span>so</span></span>
   <button data-tab="inicio" class="active">
@@ -497,6 +534,27 @@ nav.bottom .nav-brand{display:none;}
 </nav>
 
 <script>
+// ---------- TOASTS Y CONFIRMACIÓN (sustituyen a alert/confirm nativos) ----------
+function showToast(message, type){
+  const holder = document.getElementById('toast-holder');
+  const el = document.createElement('div');
+  el.className = 'toast '+(type==='error'?'toast-error':'toast-ok');
+  el.textContent = message;
+  holder.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=>el.remove(), 250);
+  }, 2600);
+}
+function showConfirm(message, onConfirm){
+  const backdrop = document.getElementById('confirm-backdrop');
+  document.getElementById('confirm-message').textContent = message;
+  backdrop.classList.add('open');
+  document.getElementById('confirm-yes').onclick = ()=>{ backdrop.classList.remove('open'); onConfirm(); };
+  document.getElementById('confirm-no').onclick = ()=>{ backdrop.classList.remove('open'); };
+}
+
 // ---------- STATE ----------
 let weights = [
   {date:'2026-08-17', value:101.7, flag:''},
@@ -587,7 +645,7 @@ function toggleTokenSetup(){
 }
 function saveTokenFromInput(){
   const t = document.getElementById('cfg-token').value.trim();
-  if(!t){ alert('Pega el token.'); return; }
+  if(!t){ showToast('Pega el token.', 'error'); return; }
   saveGhToken(t); // también lo guarda en local por si acaso funciona en este dispositivo
   setCloudStatus('connected');
   const base = location.origin + location.pathname;
@@ -599,8 +657,8 @@ function copyTokenLink(){
   const el = document.getElementById('token-link-output');
   el.select();
   navigator.clipboard?.writeText(el.value).then(
-    ()=>alert('Enlace copiado. Ábrelo en Safari y añádelo a pantalla de inicio desde ahí.'),
-    ()=>alert('No se pudo copiar automáticamente — selecciona el texto y cópialo a mano.')
+    ()=>showToast('Enlace copiado. Ábrelo en Safari y añádelo a pantalla de inicio.'),
+    ()=>showToast('No se pudo copiar — selecciona el texto y cópialo a mano.', 'error')
   );
 }
 
@@ -726,18 +784,22 @@ async function addWeight(){
   const d = document.getElementById('w-date').value || todayISO;
   const v = parseFloat(document.getElementById('w-value').value);
   const f = document.getElementById('w-spnc').value;
-  if(!v){ alert('Introduce un peso'); return; }
+  if(!v){ showToast('Introduce un peso', 'error'); return; }
   weights = weights.filter(w=>w.date!==d);
   weights.push({date:d, value:v, flag:f});
   weights.sort((a,b)=>a.date.localeCompare(b.date));
   await saveW();
   document.getElementById('w-value').value='';
   render();
+  showToast('Peso guardado ✓');
 }
-async function deleteWeight(date){
-  weights = weights.filter(w=>w.date!==date);
-  await saveW();
-  render();
+function deleteWeight(date){
+  showConfirm(`¿Eliminar el peso registrado el ${date}?`, async ()=>{
+    weights = weights.filter(w=>w.date!==date);
+    await saveW();
+    render();
+    showToast('Registro eliminado');
+  });
 }
 
 // ---------- NOTE PARSER ----------
@@ -785,7 +847,7 @@ function exerciseVolume(ex){
 
 function analyzeNote(){
   const text = document.getElementById('s-note').value;
-  if(!text.trim()){ alert('Pega una nota primero'); return; }
+  if(!text.trim()){ showToast('Pega una nota primero', 'error'); return; }
   lastPreview = parseNote(text);
   const el = document.getElementById('preview-list');
   el.innerHTML = lastPreview.map(ex=>{
@@ -962,13 +1024,14 @@ async function saveDayForm(){
     });
     if(exBlocks.length) exercises.push({name, blocks:exBlocks, raw:name, ok:true});
   });
-  if(exercises.length===0){ alert('No has rellenado ningún ejercicio.'); return; }
+  if(exercises.length===0){ showToast('No has rellenado ningún ejercicio.', 'error'); return; }
   sessions = sessions.filter(s=>s.date!==date);
   sessions.push({date, exercises});
   sessions.sort((a,b)=>a.date.localeCompare(b.date));
   dayFormEditMode = false;
   await saveS();
   render();
+  showToast('Entreno guardado ✓');
 }
 
 function initDayPicker(){
@@ -1321,11 +1384,14 @@ function labelForSession(s){
   return bestScore>0 ? best : 'Entreno libre';
 }
 
+let sessionLogLimit = 8;
 function renderSessionLog(){
   const el = document.getElementById('session-log');
   if(sessions.length===0){ el.innerHTML='<div class="empty">Sin sesiones aún</div>'; return; }
   const dowNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  el.innerHTML = [...sessions].reverse().map(s=>{
+  const reversed = [...sessions].reverse();
+  const visible = reversed.slice(0, sessionLogLimit);
+  el.innerHTML = visible.map(s=>{
     const dow = dowNames[new Date(s.date+'T12:00:00').getDay()];
     return `
     <div class="session-card">
@@ -1342,6 +1408,9 @@ function renderSessionLog(){
       }).join('')}
     </div>`;
   }).join('');
+  if(reversed.length > sessionLogLimit){
+    el.innerHTML += `<button class="btn ghost small" style="width:100%;margin-top:4px;" onclick="sessionLogLimit+=10;renderSessionLog()">Ver más (${reversed.length - sessionLogLimit} restantes)</button>`;
+  }
 }
 
 // ---------- EXCEL EXPORT / IMPORT ----------
@@ -1362,9 +1431,9 @@ function importExcel(evt){
       loadFromWorkbookBuffer(e.target.result);
       await persist();
       render();
-      alert('Datos cargados correctamente.');
+      showToast('Datos cargados correctamente ✓');
     }catch(err){
-      alert('No se ha podido leer el archivo. Asegúrate de que es un .xlsx con el formato de este panel.');
+      showToast('No se ha podido leer el archivo (.xlsx no válido)', 'error');
     }
     evt.target.value = '';
   };
