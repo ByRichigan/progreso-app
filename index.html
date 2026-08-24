@@ -136,9 +136,16 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .log-item .flag{font-size:10px;color:var(--muted);background:var(--card);padding:2px 6px;border-radius:6px;margin-left:6px;}
 .log-item .del{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;}
 
-.session-card{background:var(--card-2);border-radius:12px;padding:13px;margin-bottom:8px;}
-.session-card .top{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
-.session-card .top b{color:var(--text);}
+.session-card{background:var(--card-2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:12px;}
+.session-card .top{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line);}
+.session-card .top .date-info{display:flex;flex-direction:column;gap:1px;}
+.session-card .top .date-info b{color:var(--text);font-family:var(--font-d);font-size:15px;}
+.session-card .top .date-info .dow{font-size:11px;color:var(--accent);text-transform:capitalize;font-weight:600;}
+.session-card .top .count-badge{font-size:10.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:3px 9px;border-radius:99px;white-space:nowrap;}
+.session-card .ex-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 0;border-top:1px dashed var(--line);}
+.session-card .ex-row:first-of-type{border-top:none;padding-top:0;}
+.session-card .ex-row .n{font-weight:600;color:var(--text);}
+.session-card .ex-row .s{color:var(--muted);}
 
 /* day-form */
 .ex-block{background:var(--card-2);border-radius:12px;padding:12px 13px;margin-bottom:8px;}
@@ -148,10 +155,17 @@ textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;fon
 .ex-block .ex-last{font-size:11px;color:var(--muted);margin-bottom:8px;}
 .ex-block .ex-last .up{color:var(--good);}
 .ex-block .ex-last .down{color:var(--bad);}
-.ex-row-inputs{display:grid;grid-template-columns:56px 1fr 70px 28px;gap:6px;margin-bottom:6px;align-items:center;}
-.ex-row-inputs input{padding:8px 6px;font-size:13px;text-align:center;}
-.ex-row-inputs .rm{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+.ex-row-inputs{display:grid;grid-template-columns:48px minmax(0,1fr) 62px 24px;gap:5px;margin-bottom:6px;align-items:center;}
+.ex-row-inputs input{width:100%;min-width:0;box-sizing:border-box;padding:8px 4px;font-size:13px;text-align:center;}
+.ex-row-inputs .rm{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;min-width:0;}
 .ex-add-block{background:none;border:1px dashed var(--line);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;width:100%;margin-top:2px;}
+
+/* día ya registrado */
+.locked-box{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card-2);border-radius:12px;padding:14px;margin-bottom:6px;flex-wrap:wrap;}
+.locked-check{display:flex;align-items:center;gap:10px;}
+.locked-check svg{width:26px;height:26px;color:var(--good);flex-shrink:0;}
+.locked-check b{font-size:14px;}
+.locked-check .sub2{font-size:11.5px;color:var(--muted);margin-top:1px;}
 
 /* calendar */
 .cal-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;}
@@ -382,9 +396,10 @@ nav.bottom .nav-brand{display:none;}
     <div class="card">
       <div class="card-h">
         <h2 id="day-form-title">Entreno de hoy</h2>
-        <select id="day-picker" onchange="renderDayForm()"></select>
+        <select id="day-picker" onchange="dayFormEditMode=false;renderDayForm()"></select>
       </div>
-      <div class="field"><label>Fecha</label><input type="date" id="day-date"></div>
+      <div class="field"><label>Fecha</label><input type="date" id="day-date" onchange="dayFormEditMode=false;renderDayForm()"></div>
+      <div id="day-form-locked" class="locked-box" style="display:none;"></div>
       <div id="day-form-exercises"></div>
       <div id="day-form-rest" class="empty" style="display:none;">Hoy toca descanso — nada que registrar.</div>
       <button class="btn" id="day-form-save" onclick="saveDayForm()" style="margin-top:6px;">Guardar entreno</button>
@@ -827,30 +842,48 @@ function prevBlocksFor(exerciseName){
   return null;
 }
 
+let dayFormEditMode = false;
 function renderDayForm(){
-  const dateInput = document.getElementById('day-date');
   const dayKey = document.getElementById('day-picker').value;
+  const date = document.getElementById('day-date').value || todayISO;
   const tpl = ROUTINE_TEMPLATE[dayKey];
   document.getElementById('day-form-title').textContent = tpl.label;
   const holder = document.getElementById('day-form-exercises');
   const restMsg = document.getElementById('day-form-rest');
   const saveBtn = document.getElementById('day-form-save');
+  const lockedMsg = document.getElementById('day-form-locked');
 
   if(dayKey==='descanso' || tpl.exercises.length===0){
-    holder.innerHTML=''; restMsg.style.display='block'; saveBtn.style.display='none';
+    holder.innerHTML=''; restMsg.style.display='block'; saveBtn.style.display='none'; lockedMsg.style.display='none';
     return;
   }
-  restMsg.style.display='none'; saveBtn.style.display='block';
+  restMsg.style.display='none';
+
+  const existing = sessions.find(s=>s.date===date);
+  if(existing && !dayFormEditMode){
+    holder.innerHTML=''; saveBtn.style.display='none';
+    const n = existing.exercises.filter(e=>e.ok).length;
+    lockedMsg.style.display='flex';
+    lockedMsg.innerHTML = `
+      <div class="locked-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+        <div><b>Entreno ya registrado</b><div class="sub2">${n} ejercicios guardados el ${date}</div></div>
+      </div>
+      <button class="btn ghost small" onclick="toggleDayEdit()">Editar</button>`;
+    return;
+  }
+  lockedMsg.style.display='none'; saveBtn.style.display='block';
 
   holder.innerHTML = tpl.exercises.map((name, exIdx)=>{
-    const last = lastBlocksFor(name);
+    const existingEx = existing ? existing.exercises.find(e=>e.ok && e.name===name) : null;
+    const last = existingEx ? existingEx.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight})) : lastBlocksFor(name);
     const prev = prevBlocksFor(name);
     const blocks = last && last.length ? last : [{series:2, reps:[10], weight:''}];
     let lastHint = 'Sin registros previos';
     if(last && last.length){
       const topLast = Math.max(...last.map(b=>b.weight));
-      lastHint = `Última vez: ${topLast}kg`;
-      if(prev && prev.length){
+      lastHint = existingEx ? `Guardado: ${topLast}kg` : `Última vez: ${topLast}kg`;
+      if(!existingEx && prev && prev.length){
         const topPrev = Math.max(...prev.map(b=>b.weight));
         if(topLast>topPrev) lastHint += ` <span class="up">▲ antes ${topPrev}kg</span>`;
         else if(topLast<topPrev) lastHint += ` <span class="down">▼ antes ${topPrev}kg</span>`;
@@ -871,6 +904,11 @@ function renderDayForm(){
       <button class="ex-add-block" onclick="addExRow(this)">+ bloque (dropset)</button>
     </div>`;
   }).join('');
+}
+
+function toggleDayEdit(){
+  dayFormEditMode = true;
+  renderDayForm();
 }
 
 function removeExRow(btn){
@@ -912,9 +950,9 @@ async function saveDayForm(){
   sessions = sessions.filter(s=>s.date!==date);
   sessions.push({date, exercises});
   sessions.sort((a,b)=>a.date.localeCompare(b.date));
+  dayFormEditMode = false;
   await saveS();
   render();
-  alert('Entreno guardado.');
 }
 
 function initDayPicker(){
@@ -1225,14 +1263,21 @@ function renderWeightLog(){
 function renderSessionLog(){
   const el = document.getElementById('session-log');
   if(sessions.length===0){ el.innerHTML='<div class="empty">Sin sesiones aún</div>'; return; }
-  el.innerHTML = [...sessions].reverse().map(s=>`
+  const dowNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  el.innerHTML = [...sessions].reverse().map(s=>{
+    const dow = dowNames[new Date(s.date+'T12:00:00').getDay()];
+    return `
     <div class="session-card">
-      <div class="top"><b>${s.date}</b><span>${s.exercises.filter(e=>e.ok).length} ejercicios</span></div>
+      <div class="top">
+        <div class="date-info"><b>${s.date}</b><span class="dow">${dow}</span></div>
+        <span class="count-badge">${s.exercises.filter(e=>e.ok).length} ejercicios</span>
+      </div>
       ${s.exercises.map(ex=>{
         if(!ex.ok) return `<div class="ex-row"><span class="n">${ex.name||ex.raw}</span><span class="s">sin interpretar</span></div>`;
         return `<div class="ex-row"><span class="n">${ex.name}</span><span class="s">${ex.blocks.map(blockToLabel).join(' · ')}</span></div>`;
       }).join('')}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ---------- EXCEL EXPORT / IMPORT ----------
