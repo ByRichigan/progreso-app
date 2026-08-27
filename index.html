@@ -1271,6 +1271,21 @@ function weeklyBuckets(){
   });
   return map;
 }
+function legVariantOfSession(s){
+  const names = s.exercises.filter(e=>e.ok).map(e=>e.name);
+  if(names.includes(LEG1_MARKER)) return 'pierna1';
+  if(names.includes(LEG2_MARKER)) return 'pierna2';
+  return null;
+}
+function findPrevSameLegDate(curDate, curVariant){
+  for(let i=sessions.length-1;i>=0;i--){
+    const s = sessions[i];
+    if(s.date>=curDate) continue;
+    if(legVariantOfSession(s)===curVariant) return s.date;
+  }
+  return null;
+}
+
 function renderWeekCompare(){
   const weightHolder = document.getElementById('week-compare-weight');
   const volHolder = document.getElementById('week-compare-vol');
@@ -1309,11 +1324,22 @@ function renderWeekCompare(){
     const offset = dow===0 ? 6 : dow-1; // días desde el lunes
     const curDate = shiftDate(thisMonday, offset);
     if(curDate>todayISO) return; // aún no ha llegado — lo ocultamos
-    const prevDate = shiftDate(lastMonday, offset);
     const curVol = sessByDate[curDate] || 0;
-    const hasPrev = sessByDate[prevDate]!==undefined;
-    const prevVol = sessByDate[prevDate] || 0;
     const hasCur = sessByDate[curDate]!==undefined;
+
+    let prevDate, hasPrev, prevVol, note = '';
+    if(dow===3){
+      // miércoles alterna pierna: comparamos contra el último día del MISMO tipo (normalmente hace 2 semanas, no 1)
+      const curVariant = hasCur ? legVariantOfSession(sessions.find(s=>s.date===curDate)) : dayKeyForDate(curDate);
+      prevDate = findPrevSameLegDate(curDate, curVariant);
+      hasPrev = prevDate!==null;
+      prevVol = hasPrev ? sessByDate[prevDate] : 0;
+      note = hasPrev ? ` <span style="opacity:.7;">(${prevDate.slice(5)})</span>` : '';
+    } else {
+      prevDate = shiftDate(lastMonday, offset);
+      hasPrev = sessByDate[prevDate]!==undefined;
+      prevVol = sessByDate[prevDate] || 0;
+    }
 
     let deltaHtml = '';
     if(hasCur && hasPrev){
@@ -1326,7 +1352,7 @@ function renderWeekCompare(){
       deltaHtml = `<div class="delta flat">nuevo</div>`;
     }
     chips += `<div class="week-vol-chip ${hasCur?'':'pending'}">
-      <div class="dow">${dowShort[dow]}</div>
+      <div class="dow">${dowShort[dow]}${note}</div>
       <div class="val">${hasCur ? Math.round(curVol).toLocaleString('es-ES')+'kg' : '—'}</div>
       ${deltaHtml}
     </div>`;
