@@ -441,7 +441,7 @@ nav.bottom .nav-brand{display:none;}
         <h2 id="day-form-title">Entreno de hoy</h2>
         <select id="day-picker" onchange="dayFormEditMode=false;renderDayForm()"></select>
       </div>
-      <div class="field"><label>Fecha</label><input type="date" id="day-date" onchange="dayFormEditMode=false;renderDayForm()"></div>
+      <div class="field"><label>Fecha</label><input type="date" id="day-date" onchange="onDayDateChange()"></div>
       <div id="day-form-locked" class="locked-box" style="display:none;"></div>
       <div id="day-form-exercises"></div>
       <div id="day-form-rest" class="empty" style="display:none;">Hoy toca descanso — nada que registrar.</div>
@@ -1042,6 +1042,13 @@ function initDayPicker(){
   sel.innerHTML = Object.entries(ROUTINE_TEMPLATE).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   const today = dayKeyForDate(todayISO);
   sel.value = today;
+}
+
+function onDayDateChange(){
+  const date = document.getElementById('day-date').value || todayISO;
+  document.getElementById('day-picker').value = dayKeyForDate(date);
+  dayFormEditMode = false;
+  renderDayForm();
 }
 
 // ---------- CALENDARIO ----------
