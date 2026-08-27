@@ -573,7 +573,11 @@ let weights = [
 ];
 let sessions = [];
 let lastPreview = null;
-const todayISO = new Date().toISOString().slice(0,10);
+function localISODate(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+const todayISO = localISODate(new Date());
 
 function buildSeedSessions(){
   const seed = {
@@ -1242,12 +1246,12 @@ function mondayOf(dateStr){
   const d = new Date(dateStr+'T12:00:00');
   const dow = d.getDay()===0 ? 7 : d.getDay(); // lunes=1..domingo=7
   d.setDate(d.getDate() - (dow-1));
-  return d.toISOString().slice(0,10);
+  return localISODate(d);
 }
 function shiftDate(dateStr, days){
   const d = new Date(dateStr+'T12:00:00');
   d.setDate(d.getDate()+days);
-  return d.toISOString().slice(0,10);
+  return localISODate(d);
 }
 function sessionVolume(s){
   return s.exercises.reduce((sum,ex)=> sum + (ex.ok? exerciseVolume(ex).vol:0), 0);
