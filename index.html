@@ -578,6 +578,7 @@ function localISODate(d){
   return `${y}-${m}-${day}`;
 }
 const todayISO = localISODate(new Date());
+const APP_START_DATE = '2026-08-17'; // no marcamos como "sin registrar" nada anterior a esto
 
 function buildSeedSessions(){
   const seed = {
@@ -1125,7 +1126,7 @@ function buildCalGrid(gridEl, year, month){
     const hasWorkout = sessionDates.has(dateStr);
     const rest = isRestDow(dow);
     const isToday = dateStr===todayISO;
-    const missed = !rest && !hasWorkout && dateStr<todayISO;
+    const missed = !rest && !hasWorkout && dateStr<todayISO && dateStr>=APP_START_DATE;
     let dots = '';
     if(hasWeight) dots += '<i class="dot-weight"></i>';
     if(hasWorkout) dots += '<i class="dot-workout"></i>';
