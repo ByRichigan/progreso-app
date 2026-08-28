@@ -120,6 +120,18 @@
         "Ext Gemelo 2*15,15*90",
         "Abdominales 3*12,12,10*70"
       ]
+    },
+    {
+      "date": "2026-08-28",
+      "lines": [
+        "Jalon Prono 2*9,9*77",
+        "Remo Uni Polea Alta 2*9,9*70",
+        "Remo MaqBiGrisEnt 2*10,10*90",
+        "Pullover Polea 2*9,7*57",
+        "Curl Pred 2*9,7*55",
+        "Curl Manc 2*14,12*20",
+        "Curl Anilla 1*8*30;1*10*22.5"
+      ]
     }
   ]
 }
