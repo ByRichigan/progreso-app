@@ -24,6 +24,11 @@
       "date": "2026-08-28",
       "value": 101.9,
       "flag": "SPSC"
+    },
+    {
+      "date": "2026-09-01",
+      "value": 99.4,
+      "flag": "SPNC"
     }
   ],
   "sessions": [
