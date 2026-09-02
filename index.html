@@ -954,17 +954,19 @@ function dayKeyForDate(dateStr){
 }
 function isRestDow(dow){ return dow===4 || dow===0; }
 
-function lastBlocksFor(exerciseName){
+function lastBlocksFor(exerciseName, dayKey){
   for(let i=sessions.length-1;i>=0;i--){
+    if(dayKey && sessionDayKey(sessions[i])!==dayKey) continue;
     const ex = sessions[i].exercises.find(e=>e.ok && e.name===exerciseName);
     if(ex) return ex.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight}));
   }
   return null;
 }
-function prevBlocksFor(exerciseName){
-  // la penúltima vez (para poder comparar y mostrar flecha de progreso)
+function prevBlocksFor(exerciseName, dayKey){
+  // la penúltima vez DEL MISMO DÍA (para poder comparar y mostrar flecha de progreso)
   let found = 0;
   for(let i=sessions.length-1;i>=0;i--){
+    if(dayKey && sessionDayKey(sessions[i])!==dayKey) continue;
     const ex = sessions[i].exercises.find(e=>e.ok && e.name===exerciseName);
     if(ex){ found++; if(found===2) return ex.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight})); }
   }
@@ -1005,8 +1007,8 @@ function renderDayForm(){
 
   holder.innerHTML = tpl.exercises.map((name, exIdx)=>{
     const existingEx = existing ? existing.exercises.find(e=>e.ok && e.name===name) : null;
-    const last = existingEx ? existingEx.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight})) : lastBlocksFor(name);
-    const prev = prevBlocksFor(name);
+    const last = existingEx ? existingEx.blocks.map(b=>({series:b.series, reps:[...b.reps], weight:b.weight})) : lastBlocksFor(name, dayKey);
+    const prev = prevBlocksFor(name, dayKey);
     const blocks = last && last.length ? last : [{series:2, reps:[10], weight:''}];
     let lastHint = 'Sin registros previos';
     if(last && last.length){
@@ -1459,15 +1461,19 @@ function renderWeightLog(){
     </div>`).join('');
 }
 
-function labelForSession(s){
+function sessionDayKey(s){
   const names = new Set(s.exercises.filter(e=>e.ok).map(e=>e.name));
   let best = null, bestScore = 0;
   Object.entries(ROUTINE_TEMPLATE).forEach(([key, tpl])=>{
     if(key==='descanso') return;
     const score = tpl.exercises.filter(n=>names.has(n)).length;
-    if(score>bestScore){ bestScore=score; best=tpl.label; }
+    if(score>bestScore){ bestScore=score; best=key; }
   });
-  return bestScore>0 ? best : 'Entreno libre';
+  return bestScore>0 ? best : null;
+}
+function labelForSession(s){
+  const key = sessionDayKey(s);
+  return key ? ROUTINE_TEMPLATE[key].label : 'Entreno libre';
 }
 
 let sessionLogLimit = 8;
