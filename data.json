@@ -230,6 +230,18 @@
         "Curl Bayesian 1*9*30;1*12*22.5",
         "Abdominales 3*10,8,8*77"
       ]
+    },
+    {
+      "date": "2026-09-08",
+      "lines": [
+        "Militar Maq 1*8*37.5;1*8*35",
+        "Press Inf Cables 2*10,9*50",
+        "Posterior Maq 2*12,10*70",
+        "Laterales Polea 3*10,10,10*12.5",
+        "Triceps Barra 3*12,12,10*62.5",
+        "Triceps Uni 2*12,12*22.5",
+        "Fondos 2*15*90"
+      ]
     }
   ]
 }
