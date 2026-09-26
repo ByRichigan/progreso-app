@@ -408,6 +408,18 @@
         "Curl Manc 2*14,14*20",
         "Curl Anilla 2*10,9*30"
       ]
+    },
+    {
+      "date": "2026-09-26",
+      "lines": [
+        "Press Plano 1*9*65;1*9*60",
+        "Press S Inclinado 2*8,7*27.5",
+        "Laterales Polea 3*12,12,11*12.5",
+        "Aperturas Maq 2*12,11*85",
+        "Triceps Barra 3*12,12,10*62.5",
+        "Tricep Uni 2*12,12*22.5",
+        "Fondos 2*15*90"
+      ]
     }
   ]
 }
