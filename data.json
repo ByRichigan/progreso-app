@@ -689,6 +689,18 @@
         "Curl Manc 2*14,14*20",
         "Curl Anilla 2*10,10*30"
       ]
+    },
+    {
+      "date": "2026-10-26",
+      "lines": [
+        "Remo T 1*8*60;1*8*55",
+        "Remo Prono Maq 2*10,10*60",
+        "Remo Maq Gris 2*9,8*70",
+        "Curl Pred 2*10,8*55",
+        "Curl Manc 2*18,18*17.5",
+        "Curl Bayesian 2*10,10*30",
+        "Abdominales 3*12,10,10*77"
+      ]
     }
   ]
 }
