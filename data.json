@@ -691,6 +691,18 @@
       ]
     },
     {
+      "date": "2026-10-24",
+      "lines": [
+        "Press Plano 2*9,8*65",
+        "Press S Inclinado 2*9,8*27.5",
+        "Laterales Polea 3*12,12,12*12.5",
+        "Aperturas Maq 2*12,12*85",
+        "Triceps Barra 3*12,12,12*62.5",
+        "Tricep Uni 1*8*30;1*12*22.5",
+        "Fondos 2*15*90"
+      ]
+    },
+    {
       "date": "2026-10-26",
       "lines": [
         "Remo T 1*8*60;1*8*55",
