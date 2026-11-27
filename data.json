@@ -139,6 +139,11 @@
       "date": "2026-11-20",
       "value": 99,
       "flag": "SPNC"
+    },
+    {
+      "date": "2026-11-27",
+      "value": 98.5,
+      "flag": "SPNC"
     }
   ],
   "sessions": [
